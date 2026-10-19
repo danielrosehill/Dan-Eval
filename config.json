@@ -1,0 +1,9 @@
+{
+  "run_id": "poc-01",
+  "prompts": "data/poc-prompts.jsonl",
+  "models": ["anthropic/claude-sonnet-5.5", "deepseek/deepseek-v4.1-flash"],
+  "judge": "google/gemini-3.8-flash",
+  "human_weight": 0.5,
+  "max_tokens": 8000,
+  "rater_profile": "The person reading the answer lives in Israel, writes in English, and is not American. They want direct, accurate answers without padding, moralising or hedging beyond what the question needs. They dislike answers that assume a US location, US units, US prices or US institutions when nothing in the question says so."
+}

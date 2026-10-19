@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dan-Eval Arena</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<style>
+  :root { --bg:#f7f7f5; --panel:#fff; --text:#1d1d1b; --muted:#6b6b66; --line:#deddd8; --accent:#2f5d8a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#151514; --panel:#1f1f1d; --text:#e8e8e3; --muted:#9a9a93; --line:#34342f; --accent:#7fa8d1; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 system-ui, sans-serif; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--line); }
+  header b { font-size:16px; }
+  #progress { color:var(--muted); font-size:13px; }
+  main { max-width:1500px; margin:0 auto; padding:16px 20px 120px; }
+  #prompt { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 16px; font-weight:600; margin-bottom:16px; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width: 800px) { .cols { grid-template-columns:1fr; } }
+  .ans { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:4px 18px 12px; overflow-wrap:anywhere; }
+  .ans h3 { color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin:12px 0 4px; }
+  .ans pre { overflow-x:auto; background:var(--bg); padding:8px; border-radius:6px; }
+  .ans table { border-collapse:collapse; } .ans td, .ans th { border:1px solid var(--line); padding:3px 8px; }
+  footer { position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--line); padding:10px 20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  button { font:inherit; padding:8px 16px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); cursor:pointer; }
+  button.main { border-color:var(--accent); color:var(--accent); font-weight:600; }
+  button:hover { background:var(--line); }
+  kbd { font-size:11px; color:var(--muted); margin-left:4px; }
+  #note { flex:1; min-width:200px; font:inherit; padding:8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+</style>
+</head>
+<body>
+<header><b>Dan-Eval Arena</b><span id="progress"></span></header>
+<main>
+  <div id="prompt">Loading…</div>
+  <div class="cols">
+    <div class="ans"><h3>Answer A</h3><div id="left"></div></div>
+    <div class="ans"><h3>Answer B</h3><div id="right"></div></div>
+  </div>
+</main>
+<footer>
+  <button class="main" data-c="left">A is better<kbd>1</kbd></button>
+  <button class="main" data-c="right">B is better<kbd>2</kbd></button>
+  <button data-c="tie">Tie<kbd>3</kbd></button>
+  <button data-c="both_bad">Both bad<kbd>4</kbd></button>
+  <input id="note" placeholder="Optional note: why (saved with the choice)">
+</footer>
+<script>
+let token = null;
+const $ = id => document.getElementById(id);
+const md = s => marked.parse(s || "");
+
+async function load() {
+  const d = await (await fetch("/api/next")).json();
+  if (d.done) {
+    token = null;
+    $("prompt").textContent = `All ${d.total} pairs rated. Run daneval/report.py.`;
+    $("left").innerHTML = $("right").innerHTML = "";
+    $("progress").textContent = `${d.total} / ${d.total}`;
+    return;
+  }
+  token = d.token;
+  $("prompt").textContent = d.prompt;
+  $("left").innerHTML = md(d.left);
+  $("right").innerHTML = md(d.right);
+  $("progress").textContent = `${d.rated} / ${d.total} rated`;
+  $("note").value = "";
+  window.scrollTo(0, 0);
+}
+
+async function rate(choice) {
+  if (!token) return;
+  const t = token; token = null;
+  await fetch("/api/rate", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: t, choice, note: $("note").value.trim() }) });
+  load();
+}
+
+document.querySelectorAll("button[data-c]").forEach(b => b.onclick = () => rate(b.dataset.c));
+document.addEventListener("keydown", e => {
+  if (document.activeElement === $("note")) return;
+  const c = { "1": "left", "2": "right", "3": "tie", "4": "both_bad" }[e.key];
+  if (c) rate(c);
+});
+load();
+</script>
+</body>
+</html>

@@ -1,10 +1,19 @@
 # Dan-Eval
 
-> **Status: placeholder (2026-10-19).** No harness, prompts or results yet. This README records the scope and where each component lives.
+> **Status: proof of concept (2026-10-19).** The harness runs from start to finish on a 24-prompt POC set (run `poc-01`): two models, judge scores, the A/B arena and the report. Human ratings for `poc-01` have not been collected yet. Method: [docs/method.md](docs/method.md).
 
 A composite of my pet-peeve evaluations: the behaviours I check before adopting a new model. It is not a capability benchmark. It asks whether a model carries the biases and blind spots that make it annoying, or unusable, for someone in my position: Israel-based, English-speaking and non-American.
 
 Each component is **atomic**. It lives in its own repository with its own prompts, rubric and results, and can be run and cited on its own. Dan-Eval runs them together and reports one scorecard per model.
+
+## Scoring: judge, human, composite
+
+Each lens is scored by two signals:
+
+- **LLM-as-judge.** A judge model that is not one of the models under test scores each answer 0–3 on each of its prompt's lenses. It also picks the better answer of each pair.
+- **Human A/B.** A local arena (`daneval/arena.py`) shows the same pairs to me blind, in random left/right order. This is pairwise preference evaluation, as in Chatbot Arena. It is not reinforcement learning, since nothing is trained on the choices.
+
+The report shows a judge view, a human view and a weighted composite, per model and per lens. It also shows where the judge and I disagree. Details and run commands: [docs/method.md](docs/method.md).
 
 ## Components
 
