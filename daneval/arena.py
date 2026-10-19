@@ -2,23 +2,48 @@
 in random left/right order. Choices go to runs/<run_id>/human_prefs.jsonl.
 
     uv run daneval/arena.py            # then open http://localhost:8765
+
+On the Hugging Face Space (space/), RATINGS_REPO names a private dataset: ratings are pulled
+from it at startup and pushed after every choice, because a Space's disk does not survive a restart.
 """
 import json
+import os
 import random
 import secrets
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from common import append_jsonl, load_config, load_prompts, model_pairs, pair_id, read_jsonl, responses_by_key
 
-PORT = 8765
+PORT = int(os.environ.get("PORT", 8765))
+HOST = os.environ.get("HOST", "127.0.0.1")
+RATINGS_REPO = os.environ.get("RATINGS_REPO")  # e.g. danielrosehill/Dan-Eval-Ratings
 cfg = load_config()
 prompts = load_prompts(cfg)
 responses = responses_by_key(cfg)
 prefs_path = cfg["run_dir"] / "human_prefs.jsonl"
 PAGE = (Path(__file__).parent / "arena.html").read_bytes()
+remote_path = f"{cfg['run_id']}/human_prefs.jsonl"
+push_lock = threading.Lock()
 pending = {}  # token -> (pid, left_model, right_model); models stay server-side so the page is blind
+
+
+def pull_ratings():
+    from huggingface_hub import hf_hub_download
+    from huggingface_hub.errors import EntryNotFoundError
+    try:
+        hf_hub_download(RATINGS_REPO, remote_path, repo_type="dataset", local_dir=cfg["run_dir"].parent)
+    except EntryNotFoundError:
+        pass  # first rating of this run
+
+
+def push_ratings():
+    from huggingface_hub import HfApi
+    with push_lock:
+        HfApi().upload_file(path_or_fileobj=str(prefs_path), path_in_repo=remote_path, repo_id=RATINGS_REPO,
+                            repo_type="dataset", commit_message=f"Rating for {cfg['run_id']}")
 
 
 def all_pairs():
@@ -67,6 +92,8 @@ class Handler(BaseHTTPRequestHandler):
             "pair_id": pair_id(pid, left, right), "prompt_id": pid, "shown_left": left, "shown_right": right,
             "winner": winner, "outcome": "win" if winner else body["choice"],
             "note": body.get("note") or None, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")})
+        if RATINGS_REPO:
+            push_ratings()
         self._send(200, {"ok": True})
 
     def log_message(self, *args):
@@ -74,5 +101,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"Arena for run {cfg['run_id']}: http://localhost:{PORT}")
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    if RATINGS_REPO:
+        pull_ratings()
+    print(f"Arena for run {cfg['run_id']}: http://{HOST}:{PORT}")
+    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

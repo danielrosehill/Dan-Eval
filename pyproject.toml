@@ -3,7 +3,7 @@ name = "daneval"
 version = "0.1.0"
 description = "Dan-Eval: lens-scored LLM-as-judge plus blinded human A/B preference, combined into one scorecard"
 requires-python = ">=3.11"
-dependencies = ["httpx>=0.27"]
+dependencies = ["httpx>=0.27", "huggingface_hub>=0.25"]
 
 [tool.uv]
 package = false

@@ -11,7 +11,7 @@ Each component is **atomic**. It lives in its own repository with its own prompt
 Each lens is scored by two signals:
 
 - **LLM-as-judge.** A judge model that is not one of the models under test scores each answer 0–3 on each of its prompt's lenses. It also picks the better answer of each pair.
-- **Human A/B.** A local arena (`daneval/arena.py`) shows the same pairs to me blind, in random left/right order. This is pairwise preference evaluation, as in Chatbot Arena. It is not reinforcement learning, since nothing is trained on the choices.
+- **Human A/B.** An arena (`daneval/arena.py`, run locally or on the private HF Space `Dan-Eval-Arena`) shows the same pairs to me blind, in random left/right order. This is pairwise preference evaluation, as in Chatbot Arena. It is not reinforcement learning, since nothing is trained on the choices.
 
 The report shows a judge view, a human view and a weighted composite, per model and per lens. It also shows where the judge and I disagree. Details and run commands: [docs/method.md](docs/method.md).
 

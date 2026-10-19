@@ -18,7 +18,7 @@ The A/B mechanism is **pairwise human preference evaluation**, the same idea as 
 |---|---|---|
 | 1. Generate | `daneval/generate.py` | `responses.jsonl`: one answer per (prompt, model). No system prompt, because the eval measures the model's defaults. |
 | 2. Judge | `daneval/judge.py` | `judge_scores.jsonl`: each answer scored 0–3 on every lens its prompt carries (0 is clean). `judge_pairs.jsonl`: for each prompt and pair of models, which answer the reader would rather have. |
-| 3. Human A/B | `daneval/arena.py` → http://localhost:8765 | `human_prefs.jsonl`: blinded choices of A, B, tie or both bad, with an optional note. Keys: 1, 2, 3 and 4. |
+| 3. Human A/B | `daneval/arena.py` → http://localhost:8765, or the hosted Space (below) | `human_prefs.jsonl`: blinded choices of A, B, tie or both bad, with an optional note. Keys: 1, 2, 3 and 4. |
 | 4. Report | `daneval/report.py` | `report.md` / `report.json` |
 
 All four steps can be resumed. Anything already recorded is skipped, so rerunning a step only fills the gaps. Every setting is in [`config.json`](../config.json): `run_id`, the prompt file, the models under test, the judge, `human_weight` and `rater_profile`. The profile describes the reader, and the judge grades from that reader's point of view.
@@ -30,6 +30,20 @@ uv venv && uv pip install httpx          # needs OPENROUTER_API_KEY
 .venv/bin/python daneval/arena.py        # rate in the browser
 .venv/bin/python daneval/report.py
 ```
+
+## Hosted arena (private Hugging Face Space)
+
+You can also rate on a hosted copy of the arena, the private Space **[danielrosehill/Dan-Eval-Arena](https://huggingface.co/spaces/danielrosehill/Dan-Eval-Arena)**. Open it while logged in to Hugging Face. To anyone not logged in it returns 404, which was checked on 2026-10-19.
+
+- **Where ratings are stored.** A Space's disk is wiped when the Space restarts, so ratings are kept in the private dataset `danielrosehill/Dan-Eval-Ratings` at `<run_id>/human_prefs.jsonl`. `arena.py` downloads that file when it starts. After every choice it uploads the file again, which makes one commit per rating. This only happens when the `RATINGS_REPO` environment variable is set. When it is not set, the local arena works as before.
+- **Space configuration.** It has an `HF_TOKEN` secret, which must have write access to the dataset, and a `RATINGS_REPO=danielrosehill/Dan-Eval-Ratings` variable. Both were set once through `HfApi.add_space_secret` / `add_space_variable`.
+- **Deploying.** Run `space/deploy.sh`. It bundles `config.json`, the prompts and lenses, and the current run's `responses.jsonl` with the arena code. Run it again whenever `run_id` changes or responses are regenerated.
+- **Building the report from Space ratings.** First pull the ratings into the local run folder, then run the report:
+  ```bash
+  hf download danielrosehill/Dan-Eval-Ratings poc-01/human_prefs.jsonl --repo-type dataset --local-dir runs/
+  .venv/bin/python daneval/report.py
+  ```
+- **Don't rate the same run in two places at once.** If you use the local arena and the Space for the same run, the Space's next upload overwrites the dataset file with its own copy.
 
 ## Why the composite uses pairwise win rate
 
