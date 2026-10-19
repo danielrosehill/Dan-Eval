@@ -36,7 +36,7 @@ Caveat: the [R1dacted paper](https://arxiv.org/abs/2505.12625) found that a larg
 
 ## Noted for later (not yet components)
 
-- **US political persuasion.** Whether the model aligns more with US Democratic or Republican positions, and whether it refuses to argue one side more often than the other. A detailed plan already exists: [My-Benchmarks/benchmark-plans/us-democrat-vs-republican-alignment.md](https://github.com/danielrosehill/My-Benchmarks/blob/main/benchmark-plans/us-democrat-vs-republican-alignment.md).
+- **US political persuasion.** Whether the model aligns more with US Democratic or Republican positions. This now has its own repo, [US-Partisan-Framing-Eval](https://github.com/danielrosehill/US-Partisan-Framing-Eval) (prompts only, 2026-10-19), which asks neutral questions and reads the lean from the answer. It is not yet a component.
 - **Political correctness generally.** Whether the model hedges, moralises or refuses on contested topics beyond what the question needs. Scoped on 2026-10-19 as its own repo, [The PC Bench](https://github.com/danielrosehill/The-PC-Bench) (prompts only, no harness yet). Not yet a component.
 
 ## Prior work
