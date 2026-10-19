@@ -64,6 +64,15 @@ def main():
                       "judge_rationale": jr.get("rationale"), "human_note": hr.get("note")}
                      for jr, hr in both if jr["winner"] != hr["winner"]]
 
+    # Human tags: share of each model's rated answers carrying each tag
+    tag_counts, rated = defaultdict(lambda: defaultdict(int)), defaultdict(int)
+    for r in human:
+        for m, ts in (r.get("tags") or {}).items():
+            rated[m] += 1
+            for t in ts:
+                tag_counts[m][t] += 1
+    all_tags = sorted({t for m in tag_counts for t in tag_counts[m]})
+
     report = {
         "run_id": cfg["run_id"], "models": models, "judge": cfg["judge"], "human_weight": w,
         "views": views,
@@ -71,6 +80,7 @@ def main():
         "agreement": {"pairs_rated_by_both": len(both), "agree": len(agree),
                       "rate": round(len(agree) / len(both), 3) if both else None},
         "disagreements": disagreements,
+        "human_tags": {m: {"answers_rated": rated[m], "counts": dict(tag_counts[m])} for m in models},
     }
     (rd / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
 
@@ -88,6 +98,11 @@ def main():
            "| Model | " + " | ".join(lens_ids) + " |", "|---|" + "---|" * len(lens_ids)]
     for m in models:
         md.append(f"| `{m}` | " + " | ".join(fmt(report["lens_severity"][m].get(l)) for l in lens_ids) + " |")
+    if all_tags:
+        md += ["", "## Your tags (answers tagged / answers rated)", "", "| Tag | " + " | ".join(f"`{m}`" for m in models) + " |",
+               "|---|" + "---|" * len(models)]
+        for t in all_tags:
+            md.append(f"| {t} | " + " | ".join(f"{tag_counts[m][t]} / {rated[m]}" for m in models) + " |")
     a = report["agreement"]
     md += ["", "## Judge vs human", "",
            f"Agreement on {a['pairs_rated_by_both']} pairs rated by both: {fmt(a['rate'])}", ""]

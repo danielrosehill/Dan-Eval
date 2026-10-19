@@ -16,13 +16,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from common import append_jsonl, load_config, load_prompts, model_pairs, pair_id, read_jsonl, responses_by_key
+from common import append_jsonl, load_config, load_lenses, load_prompts, model_pairs, pair_id, read_jsonl, responses_by_key
 
 PORT = int(os.environ.get("PORT", 8765))
 HOST = os.environ.get("HOST", "127.0.0.1")
 RATINGS_REPO = os.environ.get("RATINGS_REPO")  # e.g. danielrosehill/Dan-Eval-Ratings
 cfg = load_config()
 prompts = load_prompts(cfg)
+lenses = load_lenses()
 responses = responses_by_key(cfg)
 prefs_path = cfg["run_dir"] / "human_prefs.jsonl"
 PAGE = (Path(__file__).parent / "arena.html").read_bytes()
@@ -62,7 +63,10 @@ def next_pair():
     left, right = random.sample([m1, m2], 2)
     token = secrets.token_hex(8)
     pending[token] = (pid, left, right)
-    return {"token": token, "prompt": prompts[pid]["prompt"], "left": responses[(pid, left)],
+    shown = [{"id": l, "name": lenses[l]["name"], "tags": lenses[l]["tags"]} for l in prompts[pid]["lenses"]]
+    # Bias lenses first, general last: the bias lens is the reason the prompt is in the set
+    shown.sort(key=lambda l: l["id"] == "general")
+    return {"token": token, "prompt": prompts[pid]["prompt"], "lenses": shown, "left": responses[(pid, left)],
             "right": responses[(pid, right)], "rated": len(pairs) - len(todo), "total": len(pairs)}
 
 
@@ -91,9 +95,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(400, {"error": "unknown token or choice"})
         pid, left, right = pending.pop(body["token"])
         winner = {"left": left, "right": right}.get(body["choice"])
+        allowed = {t for l in prompts[pid]["lenses"] for t in lenses[l]["tags"]}
+        tags = {m: [t for t in body.get(side) or [] if t in allowed]
+                for m, side in ((left, "tags_left"), (right, "tags_right"))}
         append_jsonl(prefs_path, {
             "pair_id": pair_id(pid, left, right), "prompt_id": pid, "shown_left": left, "shown_right": right,
-            "winner": winner, "outcome": "win" if winner else body["choice"],
+            "winner": winner, "outcome": "win" if winner else body["choice"], "tags": tags,
             "note": body.get("note") or None, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")})
         if RATINGS_REPO:
             push_ratings()

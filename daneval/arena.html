@@ -16,6 +16,12 @@
   header b { font-size:16px; }
   #progress { color:var(--muted); font-size:13px; }
   main { max-width:1500px; margin:0 auto; padding:16px 20px 120px; }
+  #lenses { display:flex; gap:6px; flex-wrap:wrap; margin:-8px 0 16px; }
+  .lens { font-size:12px; padding:2px 10px; border-radius:999px; border:1px solid var(--accent); color:var(--accent); }
+  .tags { border-top:1px solid var(--line); margin-top:12px; padding-top:8px; }
+  .tags .grp { font-size:12px; color:var(--muted); margin:6px 0 4px; }
+  .tag { font-size:13px; padding:3px 10px; margin:0 4px 4px 0; border-radius:999px; }
+  .tag.on { background:var(--accent); border-color:var(--accent); color:var(--panel); }
   #prompt { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 16px; font-weight:600; margin-bottom:16px; }
   .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   @media (max-width: 800px) { .cols { grid-template-columns:1fr; } }
@@ -35,9 +41,10 @@
 <header><b>Dan-Eval Arena</b><span id="progress"></span></header>
 <main>
   <div id="prompt">Loading…</div>
+  <div id="lenses"></div>
   <div class="cols">
-    <div class="ans"><h3>Answer A</h3><div id="left"></div></div>
-    <div class="ans"><h3>Answer B</h3><div id="right"></div></div>
+    <div class="ans"><h3>Answer A</h3><div id="left"></div><div class="tags" id="tags_left"></div></div>
+    <div class="ans"><h3>Answer B</h3><div id="right"></div><div class="tags" id="tags_right"></div></div>
   </div>
 </main>
 <footer>
@@ -51,13 +58,32 @@
 let token = null;
 const $ = id => document.getElementById(id);
 const md = s => marked.parse(s || "");
+const picked = { tags_left: new Set(), tags_right: new Set() };
+
+function renderTags(side, lenses) {
+  picked[side] = new Set();
+  const box = $(side);
+  box.innerHTML = "";
+  for (const lens of lenses) {
+    const g = document.createElement("div");
+    g.className = "grp"; g.textContent = lens.name;
+    box.appendChild(g);
+    for (const t of lens.tags) {
+      const b = document.createElement("button");
+      b.className = "tag"; b.textContent = t;
+      b.onclick = () => { picked[side].has(t) ? picked[side].delete(t) : picked[side].add(t); b.classList.toggle("on"); };
+      box.appendChild(b);
+    }
+  }
+}
 
 async function load() {
   const d = await (await fetch("/api/next")).json();
   if (d.done) {
     token = null;
     $("prompt").textContent = `All ${d.total} pairs rated. Run daneval/report.py.`;
-    $("left").innerHTML = $("right").innerHTML = "";
+    $("left").innerHTML = $("right").innerHTML = $("lenses").innerHTML = "";
+    $("tags_left").innerHTML = $("tags_right").innerHTML = "";
     $("progress").textContent = `${d.total} / ${d.total}`;
     return;
   }
@@ -65,6 +91,9 @@ async function load() {
   $("prompt").textContent = d.prompt;
   $("left").innerHTML = md(d.left);
   $("right").innerHTML = md(d.right);
+  $("lenses").innerHTML = d.lenses.map(l => `<span class="lens">${l.name}</span>`).join("");
+  renderTags("tags_left", d.lenses);
+  renderTags("tags_right", d.lenses);
   $("progress").textContent = `${d.rated} / ${d.total} rated`;
   $("note").value = "";
   window.scrollTo(0, 0);
@@ -74,7 +103,8 @@ async function rate(choice) {
   if (!token) return;
   const t = token; token = null;
   await fetch("/api/rate", { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: t, choice, note: $("note").value.trim() }) });
+    body: JSON.stringify({ token: t, choice, note: $("note").value.trim(),
+      tags_left: [...picked.tags_left], tags_right: [...picked.tags_right] }) });
   load();
 }
 

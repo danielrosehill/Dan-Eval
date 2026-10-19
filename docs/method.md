@@ -18,7 +18,7 @@ The A/B mechanism is **pairwise human preference evaluation**, the same idea as 
 |---|---|---|
 | 1. Generate | `daneval/generate.py` | `responses.jsonl`: one answer per (prompt, model). No system prompt, because the eval measures the model's defaults. |
 | 2. Judge | `daneval/judge.py` | `judge_scores.jsonl`: each answer scored 0–3 on every lens its prompt carries (0 is clean). `judge_pairs.jsonl`: for each prompt and pair of models, which answer the reader would rather have. |
-| 3. Human A/B | `daneval/arena.py` → http://localhost:8765, or the hosted Space (below) | `human_prefs.jsonl`: blinded choices of A, B, tie or both bad, with an optional note. Keys: 1, 2, 3 and 4. |
+| 3. Human A/B | `daneval/arena.py` → http://localhost:8765, or the hosted Space (below) | `human_prefs.jsonl`: blinded choices of A, B, tie or both bad, with an optional note. Keys: 1, 2, 3 and 4. The page names the prompt's lenses and has a row of preset tags under each answer, such as Refusal, Hedging, Diversion or State framing for the CCP lens. They are stored as `tags: {model: [tag, …]}`. |
 | 4. Report | `daneval/report.py` | `report.md` / `report.json` |
 
 All four steps can be resumed. Anything already recorded is skipped, so rerunning a step only fills the gaps. Every setting is in [`config.json`](../config.json): `run_id`, the prompt file, the models under test, the judge, `human_weight` and `rater_profile`. The profile describes the reader, and the judge grades from that reader's point of view.
@@ -53,6 +53,8 @@ The judge and the human rate **the same pairs**, so they can be compared on the 
 - For each signal, a model's **win rate** is its wins divided by the pairs it appeared in. A tie or a "both bad" counts as half a win to each model.
 - **Composite** = `human_weight × human + (1 − human_weight) × judge`, worked out per model and per lens. When only one signal has data, that signal is used on its own.
 - **Divergence**: the agreement rate on pairs both signals rated, and a list of every pair where they disagree, with the judge's rationale next to my note. That list shows where the judge is not a stand-in for me.
+
+The tags you add in the arena record what kind of failure an answer showed, for example a refusal versus hedging. They are not part of the win rate either. The report shows, per model, how many of its rated answers got each tag. Each lens's tag list is the `tags` field in [`data/lenses.json`](../data/lenses.json), and the server only accepts tags from the lenses of the prompt being rated. Showing the lens labels does tell you what each prompt is testing for. That is deliberate. The answers stay blind; the purpose of the prompt does not.
 
 The judge's 0–3 lens scores answer a different question: how bad the problem is, in absolute terms. They are reported next to the win rates and are not folded into the composite.
 
