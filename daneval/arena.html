@@ -35,6 +35,10 @@
   button { font:inherit; padding:8px 16px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); cursor:pointer; }
   button.main { border-color:var(--accent); color:var(--accent); font-weight:600; }
   button:hover { background:var(--line); }
+  button:disabled { opacity:.4; cursor:default; }
+  button.sel { background:var(--accent); border-color:var(--accent); color:var(--panel); }
+  #confirm { font-weight:600; }
+  #confirm:not(:disabled) { background:var(--accent); border-color:var(--accent); color:var(--panel); }
   kbd { font-size:11px; color:var(--muted); margin-left:4px; }
   #note { flex:1; min-width:200px; font:inherit; padding:8px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
 </style>
@@ -49,6 +53,8 @@
   <button class="main" data-c="right">B is better<kbd>2</kbd></button>
   <button data-c="tie">Tie<kbd>3</kbd></button>
   <button data-c="both_bad">Both bad<kbd>4</kbd></button>
+  <button id="confirm" disabled>Confirm<kbd>Enter</kbd></button>
+  <button id="undo" title="Remove your last rating and show that pair again">↶ Undo last<kbd>U</kbd></button>
   <input id="note" placeholder="Optional note: why (saved with the choice)">
   </div>
   <div class="cols">
@@ -61,7 +67,7 @@
   </div>
 </main>
 <script>
-let token = null;
+let token = null, choice = null;
 const $ = id => document.getElementById(id);
 const md = s => marked.parse(s || "");
 const picked = { tags_left: new Set(), tags_right: new Set() };
@@ -83,8 +89,9 @@ function renderTags(side, lenses) {
   }
 }
 
-async function load() {
-  const d = await (await fetch("/api/next")).json();
+async function load(d) {
+  d = d || await (await fetch("/api/next")).json();
+  $("undo").disabled = !d.rated;
   if (d.done) {
     token = null;
     $("prompt").textContent = `All ${d.total} pairs rated. Run daneval/report.py.`;
@@ -94,6 +101,8 @@ async function load() {
     return;
   }
   token = d.token;
+  choice = null;
+  select(null);
   $("prompt").textContent = d.prompt;
   $("left").innerHTML = md(d.left);
   $("right").innerHTML = md(d.right);
@@ -105,20 +114,39 @@ async function load() {
   window.scrollTo(0, 0);
 }
 
-async function rate(choice) {
-  if (!token) return;
-  const t = token; token = null;
+// Two steps so a stray click or key press never saves a rating: select, then confirm.
+function select(c) {
+  if (!token && c) return;
+  choice = choice === c ? null : c;
+  document.querySelectorAll("button[data-c]").forEach(b => b.classList.toggle("sel", b.dataset.c === choice));
+  $("confirm").disabled = !choice;
+}
+
+async function confirmChoice() {
+  if (!token || !choice) return;
+  const t = token, c = choice;
+  token = null;
+  select(null);
   await fetch("/api/rate", { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: t, choice, note: $("note").value.trim(),
+    body: JSON.stringify({ token: t, choice: c, note: $("note").value.trim(),
       tags_left: [...picked.tags_left], tags_right: [...picked.tags_right] }) });
   load();
 }
 
-document.querySelectorAll("button[data-c]").forEach(b => b.onclick = () => rate(b.dataset.c));
+async function undo() {
+  if (!$("undo").disabled) load(await (await fetch("/api/undo", { method: "POST" })).json());
+}
+$("undo").onclick = undo;
+
+document.querySelectorAll("button[data-c]").forEach(b => b.onclick = () => select(b.dataset.c));
+$("confirm").onclick = confirmChoice;
 document.addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); return confirmChoice(); }
   if (document.activeElement === $("note")) return;
+  if (e.key === "Escape") return select(null);
+  if (e.key === "u" || e.key === "U") return undo();
   const c = { "1": "left", "2": "right", "3": "tie", "4": "both_bad" }[e.key];
-  if (c) rate(c);
+  if (c) select(c);
 });
 load();
 </script>

@@ -18,7 +18,7 @@ The A/B mechanism is **pairwise human preference evaluation**, the same idea as 
 |---|---|---|
 | 1. Generate | `daneval/generate.py` | `responses.jsonl`: one answer per (prompt, model). No system prompt, because the eval measures the model's defaults. |
 | 2. Judge | `daneval/judge.py` | `judge_scores.jsonl`: each answer scored 0–3 on every lens its prompt carries (0 is clean). `judge_pairs.jsonl`: for each prompt and pair of models, which answer the reader would rather have. |
-| 3. Human A/B | `daneval/arena.py` → http://localhost:8765, or the hosted Space (below) | `human_prefs.jsonl`: blinded choices of A, B, tie or both bad, with an optional note. Keys: 1, 2, 3 and 4. The page names the prompt's lenses and has a row of preset tags under each answer, such as Refusal, Hedging, Diversion or State framing for the CCP lens. They are stored as `tags: {model: [tag, …]}`. |
+| 3. Human A/B | `daneval/arena.py` → http://localhost:8765, or the hosted Space (below) | `human_prefs.jsonl`: blinded choices of A, B, tie or both bad, with an optional note. Rating takes two steps so that a stray click can't save anything: `1`–`4` (or a click) only selects, and `Enter` (or Confirm) saves. `Esc` clears the selection, and `U` undoes the last saved rating and shows that pair again, in the same left/right order. The page names the prompt's lenses and has a row of preset tags under each answer, such as Refusal, Hedging, Diversion or State framing for the CCP lens. They are stored as `tags: {model: [tag, …]}`. |
 | 4. Report | `daneval/report.py` | `report.md` / `report.json` |
 
 All four steps can be resumed. Anything already recorded is skipped, so rerunning a step only fills the gaps. Every setting is in [`config.json`](../config.json): `run_id`, the prompt file, the models under test, the judge, `human_weight` and `rater_profile`. The profile describes the reader, and the judge grades from that reader's point of view.
@@ -44,6 +44,7 @@ You can also rate on a hosted copy of the arena, the private Space **[danielrose
   .venv/bin/python daneval/report.py
   ```
 - **The Space adds a query string to the URL.** Hugging Face embeds the app at `https://danielrosehill-dan-eval-arena.hf.space/?__sign=<jwt>`. The first deploy compared `self.path == "/"`, so it returned `{"error": "not found"}` on huggingface.co while direct requests to `/` worked. The handlers now match on `urlsplit(self.path).path`. Fixed and verified on 2026-10-19.
+- **Editing the ratings file by hand.** The Space keeps a local copy and uploads all of it after every rating, so a change made only on the dataset gets overwritten. Edit the dataset, then restart the Space straight away (`HfApi().restart_space(...)`) so it reloads the file. This was done on 2026-10-19 to remove an accidental double-click rating.
 - **Don't rate the same run in two places at once.** If you use the local arena and the Space for the same run, the Space's next upload overwrites the dataset file with its own copy.
 
 ## Why the composite uses pairwise win rate

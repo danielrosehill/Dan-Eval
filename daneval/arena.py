@@ -58,16 +58,32 @@ def next_pair():
     pairs = all_pairs()
     todo = [p for p in pairs if pair_id(*p) not in done]
     if not todo:
-        return {"done": True, "total": len(pairs)}
+        return {"done": True, "rated": len(pairs), "total": len(pairs)}
     pid, m1, m2 = random.choice(todo)
-    left, right = random.sample([m1, m2], 2)
+    return show_pair(pid, *random.sample([m1, m2], 2), rated=len(pairs) - len(todo), total=len(pairs))
+
+
+def show_pair(pid, left, right, rated, total):
     token = secrets.token_hex(8)
     pending[token] = (pid, left, right)
     shown = [{"id": l, "name": lenses[l]["name"], "tags": lenses[l]["tags"]} for l in prompts[pid]["lenses"]]
     # Bias lenses first, general last: the bias lens is the reason the prompt is in the set
     shown.sort(key=lambda l: l["id"] == "general")
     return {"token": token, "prompt": prompts[pid]["prompt"], "lenses": shown, "left": responses[(pid, left)],
-            "right": responses[(pid, right)], "rated": len(pairs) - len(todo), "total": len(pairs)}
+            "right": responses[(pid, right)], "rated": rated, "total": total}
+
+
+def undo_last():
+    """Remove the most recent rating and serve that pair again, in the same left/right order."""
+    rows = read_jsonl(prefs_path)
+    if not rows:
+        return None
+    last = rows.pop()
+    prefs_path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+    if RATINGS_REPO:
+        push_ratings()
+    return show_pair(last["prompt_id"], last["shown_left"], last["shown_right"],
+                     rated=len(rows), total=len(all_pairs()))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -88,7 +104,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, {"error": "not found"})
 
     def do_POST(self):
-        if urlsplit(self.path).path != "/api/rate":
+        path = urlsplit(self.path).path
+        if path == "/api/undo":
+            return self._send(200, undo_last() or {"error": "nothing to undo"})
+        if path != "/api/rate":
             return self._send(404, {"error": "not found"})
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if body.get("token") not in pending or body.get("choice") not in ("left", "right", "tie", "both_bad"):
