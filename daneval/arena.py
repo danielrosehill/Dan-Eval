@@ -14,6 +14,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from common import append_jsonl, load_config, load_prompts, model_pairs, pair_id, read_jsonl, responses_by_key
 
@@ -73,15 +74,17 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body if isinstance(body, bytes) else json.dumps(body).encode())
 
     def do_GET(self):
-        if self.path == "/":
+        # Match on the path alone: the HF Space embeds the app as /?__sign=<jwt>
+        path = urlsplit(self.path).path
+        if path == "/":
             self._send(200, PAGE, "text/html; charset=utf-8")
-        elif self.path == "/api/next":
+        elif path == "/api/next":
             self._send(200, next_pair())
         else:
             self._send(404, {"error": "not found"})
 
     def do_POST(self):
-        if self.path != "/api/rate":
+        if urlsplit(self.path).path != "/api/rate":
             return self._send(404, {"error": "not found"})
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if body.get("token") not in pending or body.get("choice") not in ("left", "right", "tie", "both_bad"):

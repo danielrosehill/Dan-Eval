@@ -43,6 +43,7 @@ You can also rate on a hosted copy of the arena, the private Space **[danielrose
   hf download danielrosehill/Dan-Eval-Ratings poc-01/human_prefs.jsonl --repo-type dataset --local-dir runs/
   .venv/bin/python daneval/report.py
   ```
+- **The Space adds a query string to the URL.** Hugging Face embeds the app at `https://danielrosehill-dan-eval-arena.hf.space/?__sign=<jwt>`. The first deploy compared `self.path == "/"`, so it returned `{"error": "not found"}` on huggingface.co while direct requests to `/` worked. The handlers now match on `urlsplit(self.path).path`. Fixed and verified on 2026-10-19.
 - **Don't rate the same run in two places at once.** If you use the local arena and the Space for the same run, the Space's next upload overwrites the dataset file with its own copy.
 
 ## Why the composite uses pairwise win rate
