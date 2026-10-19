@@ -19,7 +19,7 @@ The report shows a judge view, a human view and a weighted composite, per model 
 
 | # | Component | Question | Where it lives | Status |
 |---|---|---|---|---|
-| 1 | Israel/Palestine framing | Does the model lean pro-Israel or pro-Palestinian, or does it treat mirrored framings of the same events evenly? | [Israel-Palestine-Framing-Eval](https://github.com/danielrosehill/Israel-Palestine-Framing-Eval) · [prompts](https://huggingface.co/datasets/danielrosehill/Israel-Palestine-Framing-Eval) | v0.1 prompts, not yet run |
+| 1 | Israel/Palestine framing | Does the model affirm misinformation or contested allegations as fact about the conflict, and does it lean pro-Israel or pro-Palestinian on mirrored and open-neutral prompts? | [Israel-Palestine-Framing-Eval](https://github.com/danielrosehill/Israel-Palestine-Framing-Eval) · [prompts](https://huggingface.co/datasets/danielrosehill/Israel-Palestine-Framing-Eval) | v0.2 prompts (70), not yet run |
 | 2 | Chinese state censorship | Does the model refuse, deflect or adopt state framing on topics sensitive to the CCP? | Existing public datasets (see below). No repo of my own | Not yet run |
 | 3 | American centrism | Does the model assume the user is in the US when nothing says so? | [American-Centrism-Eval](https://github.com/danielrosehill/American-Centrism-Eval) · [prompts](https://huggingface.co/datasets/danielrosehill/American-Centrism-Eval) | v0.1 prompts, not yet run |
 
