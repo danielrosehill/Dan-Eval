@@ -15,21 +15,23 @@
   header { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--line); }
   header b { font-size:16px; }
   #progress { color:var(--muted); font-size:13px; }
-  main { max-width:1500px; margin:0 auto; padding:16px 20px 120px; }
+  main { max-width:1500px; margin:0 auto; padding:16px 20px 40px; }
   #lenses { display:flex; gap:6px; flex-wrap:wrap; margin:-8px 0 16px; }
   .lens { font-size:12px; padding:2px 10px; border-radius:999px; border:1px solid var(--accent); color:var(--accent); }
-  .tags { border-top:1px solid var(--line); margin-top:12px; padding-top:8px; }
+  .tags { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:4px 14px 8px; }
+  .tags h3 { color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin:8px 0 0; }
+  .cols + .cols { margin-top:16px; }
   .tags .grp { font-size:12px; color:var(--muted); margin:6px 0 4px; }
   .tag { font-size:13px; padding:3px 10px; margin:0 4px 4px 0; border-radius:999px; }
   .tag.on { background:var(--accent); border-color:var(--accent); color:var(--panel); }
   #prompt { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 16px; font-weight:600; margin-bottom:16px; }
-  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .cols { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
   @media (max-width: 800px) { .cols { grid-template-columns:1fr; } }
   .ans { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:4px 18px 12px; overflow-wrap:anywhere; }
   .ans h3 { color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin:12px 0 4px; }
   .ans pre { overflow-x:auto; background:var(--bg); padding:8px; border-radius:6px; }
-  .ans table { border-collapse:collapse; } .ans td, .ans th { border:1px solid var(--line); padding:3px 8px; }
-  footer { position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--line); padding:10px 20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .ans table { border-collapse:collapse; display:block; overflow-x:auto; } .ans td, .ans th { border:1px solid var(--line); padding:3px 8px; }
+  #actions { position:sticky; top:0; z-index:5; background:var(--bg); padding:10px 0; margin-bottom:6px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line); }
   button { font:inherit; padding:8px 16px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); cursor:pointer; }
   button.main { border-color:var(--accent); color:var(--accent); font-weight:600; }
   button:hover { background:var(--line); }
@@ -42,18 +44,22 @@
 <main>
   <div id="prompt">Loading…</div>
   <div id="lenses"></div>
-  <div class="cols">
-    <div class="ans"><h3>Answer A</h3><div id="left"></div><div class="tags" id="tags_left"></div></div>
-    <div class="ans"><h3>Answer B</h3><div id="right"></div><div class="tags" id="tags_right"></div></div>
-  </div>
-</main>
-<footer>
+  <div id="actions">
   <button class="main" data-c="left">A is better<kbd>1</kbd></button>
   <button class="main" data-c="right">B is better<kbd>2</kbd></button>
   <button data-c="tie">Tie<kbd>3</kbd></button>
   <button data-c="both_bad">Both bad<kbd>4</kbd></button>
   <input id="note" placeholder="Optional note: why (saved with the choice)">
-</footer>
+  </div>
+  <div class="cols">
+    <div class="tags"><h3>Tags for A</h3><div id="tags_left"></div></div>
+    <div class="tags"><h3>Tags for B</h3><div id="tags_right"></div></div>
+  </div>
+  <div class="cols">
+    <div class="ans"><h3>Answer A</h3><div id="left"></div></div>
+    <div class="ans"><h3>Answer B</h3><div id="right"></div></div>
+  </div>
+</main>
 <script>
 let token = null;
 const $ = id => document.getElementById(id);
